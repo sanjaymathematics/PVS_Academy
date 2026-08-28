@@ -327,13 +327,29 @@ async function loadMaterials(){
       grid.innerHTML = `<div class="empty-note">No materials uploaded yet.</div>`;
       return;
     }
-       grid.innerHTML = materials.map(m => `
-      <a class="material-card" href="${API}/materials/${m.id}/download" target="_blank" style="text-decoration:none;color:inherit;display:block;">
+             grid.innerHTML = materials.map(m => `
+      <div class="material-card" onclick="downloadMaterial(${m.id}, '${m.filename.replace(/'/g, "\\'")}')" style="cursor:pointer;">
         <span class="filetag">${(m.filename.split('.').pop() || 'file').toUpperCase()}</span>
         <h4>${m.title}</h4>
         <div class="meta">${new Date(m.uploaded_at).toLocaleDateString()}</div>
-      </a>`).join('');
+      </div>`).join('');
   } catch (err) { grid.innerHTML = `<div class="empty-note">Couldn't load materials: ${err.message}</div>`; }
+}
+
+async function downloadMaterial(id, filename){
+  try {
+    const res = await fetch(API + "/materials/" + id + "/download", {
+      headers: { Authorization: "Bearer " + token }
+    });
+    if (!res.ok) throw new Error("Download failed");
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) { showToast("Download failed: " + err.message); }
 }
 
 // ---------- QUIZZES ----------
