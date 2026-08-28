@@ -327,12 +327,12 @@ async function loadMaterials(){
       grid.innerHTML = `<div class="empty-note">No materials uploaded yet.</div>`;
       return;
     }
-    grid.innerHTML = materials.map(m => `
-      <div class="material-card">
+       grid.innerHTML = materials.map(m => `
+      <a class="material-card" href="${API}/materials/${m.id}/download" target="_blank" style="text-decoration:none;color:inherit;display:block;">
         <span class="filetag">${(m.filename.split('.').pop() || 'file').toUpperCase()}</span>
         <h4>${m.title}</h4>
         <div class="meta">${new Date(m.uploaded_at).toLocaleDateString()}</div>
-      </div>`).join('');
+      </a>`).join('');
   } catch (err) { grid.innerHTML = `<div class="empty-note">Couldn't load materials: ${err.message}</div>`; }
 }
 
