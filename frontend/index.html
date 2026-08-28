@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Slate — teaching platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B2A44; --paper:#F6F2E9; --paper-2:#EEE8DA;
+    --teal:#3F7D77; --teal-dark:#2C5A55; --red:#B23A2E; --muted:#736A5B; --line:#DCD3BF;
+    --radius:6px;
+    --font-display:'Source Serif 4', serif; --font-body:'IBM Plex Sans', sans-serif;
+    --font-mono:'IBM Plex Mono', monospace; --font-hand:'Kalam', cursive;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font-body);}
+
+  /* ---- Login screen ---- */
+  #loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;}
+  .login-card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:36px 34px;width:340px;}
+  .login-card h1{font-family:var(--font-display);font-size:26px;font-weight:600;margin:0 0 4px;}
+  .login-card p.sub{color:var(--muted);font-size:13.5px;margin:0 0 22px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px;}
+  .field input, .field select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:var(--radius);font-size:14px;font-family:var(--font-body);}
+  .login-toggle{text-align:center;font-size:13px;color:var(--muted);margin-top:14px;}
+  .login-toggle a{color:var(--teal-dark);cursor:pointer;text-decoration:underline;}
+  .error-msg{color:var(--red);font-size:13px;margin:0 0 12px;min-height:1em;}
+  #registerFields{display:none;}
+
+  /* ---- App shell ---- */
+  .app{display:none;min-height:100vh;}
+  .app.active{display:flex;}
+  .sidebar{width:230px;flex-shrink:0;background:var(--ink);color:var(--paper);display:flex;flex-direction:column;padding:28px 0;}
+  .brand{font-family:var(--font-display);font-size:24px;font-weight:600;padding:0 24px 28px;letter-spacing:0.02em;border-bottom:1px solid rgba(246,242,233,0.15);margin-bottom:20px;}
+  .brand span{display:block;font-family:var(--font-mono);font-size:11px;font-weight:400;color:#9FB3C8;letter-spacing:0.08em;text-transform:uppercase;margin-top:4px;}
+  nav{display:flex;flex-direction:column;gap:2px;padding:0 12px;}
+  .nav-item{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:var(--radius);cursor:pointer;font-size:14.5px;color:#D9DDE6;border:none;background:none;font-family:var(--font-body);text-align:left;width:100%;}
+  .nav-item:hover{background:rgba(246,242,233,0.08);}
+  .nav-item.active{background:var(--teal);color:#fff;}
+  .sidebar-foot{margin-top:auto;padding:16px 24px 0;font-size:12px;color:#8892A0;border-top:1px solid rgba(246,242,233,0.15);padding-top:16px;}
+  .sidebar-foot button{margin-top:10px;background:none;border:1px solid rgba(246,242,233,0.3);color:#D9DDE6;padding:6px 10px;border-radius:4px;font-size:12px;cursor:pointer;}
+
+  main{flex:1;padding:36px 48px;max-width:960px;overflow-y:auto;}
+  .page-head{margin-bottom:22px;}
+  .page-head h1{font-family:var(--font-display);font-weight:600;font-size:28px;margin:0 0 6px;}
+  .page-head p{margin:0;color:var(--muted);font-size:14.5px;}
+  .tab{display:none;}
+  .tab.active{display:block;}
+
+  .material-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;}
+  .material-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px;}
+  .material-card .filetag{display:inline-block;font-family:var(--font-mono);font-size:10.5px;letter-spacing:0.05em;text-transform:uppercase;background:var(--paper-2);color:var(--teal-dark);padding:2px 7px;border-radius:3px;margin-bottom:10px;}
+  .material-card h4{margin:0 0 4px;font-size:15px;font-weight:600;}
+  .material-card .meta{font-size:12.5px;color:var(--muted);}
+  .upload-zone{border:1.5px dashed var(--line);border-radius:var(--radius);padding:24px;text-align:center;color:var(--muted);font-size:14px;margin-bottom:16px;cursor:pointer;background:#fff;}
+  .upload-zone:hover{border-color:var(--teal);color:var(--teal-dark);}
+  .upload-row{display:flex;gap:10px;margin-bottom:16px;align-items:center;}
+  .upload-row input[type=text]{flex:1;padding:9px 11px;border:1px solid var(--line);border-radius:var(--radius);font-size:14px;}
+  .empty-note{color:var(--muted);font-size:13.5px;background:#fff;border:1px dashed var(--line);border-radius:var(--radius);padding:16px;}
+
+  .quiz-list-item{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px 20px;margin-bottom:10px;cursor:pointer;}
+  .quiz-list-item:hover{border-color:var(--teal);}
+  .quiz-list-item h4{margin:0 0 3px;font-size:15.5px;font-family:var(--font-display);font-weight:600;}
+  .quiz-list-item .meta{font-size:12.5px;color:var(--muted);}
+
+  .quiz-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;}
+  .question{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;margin-bottom:16px;position:relative;}
+  .question .qnum{font-family:var(--font-mono);font-size:12px;color:var(--muted);margin-bottom:6px;}
+  .question p.qtext{font-size:15.5px;margin:0 0 14px;line-height:1.55;}
+  .options{display:flex;flex-direction:column;gap:8px;}
+  .option{display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--line);border-radius:var(--radius);cursor:pointer;font-size:14.5px;}
+  .option:hover{border-color:var(--teal);}
+  .option input{accent-color:var(--teal);}
+  .num-input{padding:9px 12px;border:1px solid var(--line);border-radius:var(--radius);font-size:14.5px;width:160px;font-family:var(--font-mono);}
+  .mark{position:absolute;top:-6px;right:-6px;font-family:var(--font-hand);font-size:34px;font-weight:700;transform:rotate(-8deg);pointer-events:none;}
+  .mark.correct{color:var(--teal);} .mark.wrong{color:var(--red);}
+  .option.was-correct{border-color:var(--teal);background:rgba(63,125,119,0.06);}
+  .option.was-wrong{border-color:var(--red);background:rgba(178,58,46,0.06);}
+
+  .btn{font-family:var(--font-body);font-weight:600;font-size:14px;padding:10px 20px;border-radius:var(--radius);border:none;cursor:pointer;}
+  .btn-primary{background:var(--teal);color:#fff;}
+  .btn-primary:hover{background:var(--teal-dark);}
+  .btn-ghost{background:none;border:1px solid var(--line);color:var(--ink);}
+  .btn-small{padding:6px 14px;font-size:13px;}
+  .btn[disabled]{opacity:0.5;cursor:not-allowed;}
+
+  .score-badge{font-family:var(--font-hand);font-weight:700;font-size:40px;color:var(--red);border:3px solid var(--red);border-radius:50%;width:82px;height:82px;display:flex;align-items:center;justify-content:center;transform:rotate(-6deg);line-height:1;text-align:center;flex-shrink:0;}
+
+  .sheet-row{display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:15px 20px;margin-bottom:10px;flex-wrap:wrap;gap:10px;}
+  .sheet-row .info h4{margin:0 0 3px;font-size:14.5px;font-weight:600;}
+  .sheet-row .info .meta{font-size:12.5px;color:var(--muted);}
+  .status{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:0.05em;padding:4px 9px;border-radius:3px;white-space:nowrap;}
+  .status.uploaded{background:#EFE9DC;color:var(--muted);}
+  .status.graded_pending_review{background:#FBF0DE;color:#8A5A1E;}
+  .status.approved{background:rgba(63,125,119,0.12);color:var(--teal-dark);}
+  .sheet-actions{display:flex;align-items:center;gap:12px;}
+  .ai-score{font-family:var(--font-hand);font-size:20px;color:var(--red);}
+  .ai-feedback{font-size:12.5px;color:var(--muted);max-width:280px;}
+  .toast{position:fixed;bottom:24px;right:24px;background:var(--ink);color:var(--paper);padding:12px 18px;border-radius:var(--radius);font-size:13.5px;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;}
+  .toast.show{opacity:1;transform:translateY(0);}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-card">
+    <h1>Slate</h1>
+    <p class="sub" id="loginSub">Sign in to your course</p>
+    <p class="error-msg" id="authError"></p>
+
+    <div id="nameField" style="display:none;" class="field">
+      <label>Full name</label>
+      <input type="text" id="regName" placeholder="Anjali Rao">
+    </div>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="authEmail" placeholder="you@vit.ac.in">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="authPassword" placeholder="••••••••">
+    </div>
+    <div id="registerFields" class="field">
+      <label>I am a</label>
+      <select id="regRole">
+        <option value="student">Student</option>
+        <option value="teacher">Teacher</option>
+      </select>
+    </div>
+
+    <button class="btn btn-primary" style="width:100%;" id="authSubmit">Sign in</button>
+    <div class="login-toggle" id="loginToggle">New here? <a id="toggleModeLink">Create an account</a></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="appShell">
+  <aside class="sidebar">
+    <div class="brand">Slate<span>Teaching platform</span></div>
+    <nav>
+      <button class="nav-item active" data-tab="materials">Materials</button>
+      <button class="nav-item" data-tab="quiz">Quizzes</button>
+      <button class="nav-item" data-tab="sheets">Answer sheets</button>
+    </nav>
+    <div class="sidebar-foot">
+      <div id="whoami"></div>
+      <button id="logoutBtn">Sign out</button>
+    </div>
+  </aside>
+
+  <main>
+    <!-- MATERIALS -->
+    <section class="tab active" id="materials">
+      <div class="page-head"><h1>Materials</h1><p>Lecture notes, slides and references for this course.</p></div>
+      <div id="matUploadArea"></div>
+      <div class="material-grid" id="matGrid"></div>
+    </section>
+
+    <!-- QUIZ LIST + TAKING -->
+    <section class="tab" id="quiz">
+      <div id="quizListView">
+        <div class="page-head"><h1>Quizzes</h1><p>Pick a quiz to take, or create one.</p></div>
+        <div id="teacherQuizControls"></div>
+        <div id="quizList"></div>
+      </div>
+      <div id="quizTakeView" style="display:none;">
+        <div class="quiz-header">
+          <div class="page-head" style="margin-bottom:0;">
+            <h1 id="quizTitle"></h1>
+            <p id="quizSub"></p>
+          </div>
+          <div id="scoreBox" style="display:none;"><div class="score-badge" id="scoreText"></div></div>
+        </div>
+        <div id="quizBody"></div>
+        <button class="btn btn-primary" id="submitQuiz">Submit quiz</button>
+        <button class="btn btn-ghost" id="backToQuizList" style="margin-left:10px;">Back to quizzes</button>
+      </div>
+    </section>
+
+    <!-- ANSWER SHEETS -->
+    <section class="tab" id="sheets">
+      <div class="page-head"><h1>Answer sheets</h1><p>Scanned submissions are OCR'd and pre-scored for your review before grades are finalized.</p></div>
+      <div id="sheetUploadArea"></div>
+      <div id="sheetQueue"></div>
+    </section>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = ""; // same-origin — served from the same FastAPI app
+let token = null;
+let currentUser = null; // {id, name, email, role}
+let isRegisterMode = false;
+let activeQuiz = null; // {id, questions:[...]}
+
+// ---------- helpers ----------
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+async function api(path, { method = "GET", body = null, form = false, auth: needsAuth = true } = {}) {
+  const headers = {};
+  if (needsAuth && token) headers["Authorization"] = "Bearer " + token;
+  let payload = body;
+  if (body && !form) {
+    headers["Content-Type"] = "application/json";
+    payload = JSON.stringify(body);
+  }
+  const res = await fetch(API + path, { method, headers, body: payload });
+  if (!res.ok) {
+    let detail = res.statusText;
+    try { const j = await res.json(); detail = j.detail || detail; } catch (e) {}
+    throw new Error(detail);
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+// ---------- AUTH ----------
+const authError = document.getElementById('authError');
+const nameField = document.getElementById('nameField');
+const registerFields = document.getElementById('registerFields');
+const loginSub = document.getElementById('loginSub');
+const authSubmit = document.getElementById('authSubmit');
+const toggleModeLink = document.getElementById('toggleModeLink');
+
+toggleModeLink.onclick = () => {
+  isRegisterMode = !isRegisterMode;
+  authError.textContent = "";
+  nameField.style.display = isRegisterMode ? "block" : "none";
+  registerFields.style.display = isRegisterMode ? "block" : "none";
+  loginSub.textContent = isRegisterMode ? "Create your account" : "Sign in to your course";
+  authSubmit.textContent = isRegisterMode ? "Create account" : "Sign in";
+  toggleModeLink.textContent = isRegisterMode ? "Sign in instead" : "Create an account";
+};
+
+authSubmit.onclick = async () => {
+  authError.textContent = "";
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  if (!email || !password) { authError.textContent = "Email and password are required."; return; }
+
+  try {
+    if (isRegisterMode) {
+      const name = document.getElementById('regName').value.trim();
+      const role = document.getElementById('regRole').value;
+      if (!name) { authError.textContent = "Name is required."; return; }
+      await api("/auth/register", { auth: false, body: { name, email, password, role } });
+      showToast("Account created — signing you in");
+    }
+    const form = new URLSearchParams();
+    form.set("username", email);
+    form.set("password", password);
+    const res = await fetch(API + "/auth/login", { method: "POST", body: form });
+    if (!res.ok) throw new Error("Incorrect email or password");
+    const data = await res.json();
+    token = data.access_token;
+    currentUser = await api("/auth/me");
+    enterApp();
+  } catch (e) {
+    authError.textContent = e.message;
+  }
+};
+
+document.getElementById('logoutBtn').onclick = () => {
+  token = null; currentUser = null; activeQuiz = null;
+  document.getElementById('appShell').classList.remove('active');
+  document.getElementById('loginScreen').style.display = 'flex';
+};
+
+function enterApp(){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appShell').classList.add('active');
+  document.getElementById('whoami').textContent = currentUser.name + " · " + currentUser.role;
+  renderMaterialsTab();
+  renderQuizListTab();
+  renderSheetsTab();
+}
+
+// ---------- MATERIALS ----------
+async function renderMaterialsTab(){
+  const uploadArea = document.getElementById('matUploadArea');
+  if (currentUser.role === 'teacher') {
+    uploadArea.innerHTML = `
+      <div class="upload-row">
+        <input type="text" id="matTitle" placeholder="Material title (e.g. Lecture 12 — Cauchy sequences)">
+      </div>
+      <div class="upload-zone" id="matUploadZone">Click to upload — PDF, slides, notes</div>
+      <input type="file" id="matFileInput" style="display:none">`;
+    document.getElementById('matUploadZone').onclick = () => document.getElementById('matFileInput').click();
+    document.getElementById('matFileInput').onchange = async (e) => {
+      const f = e.target.files[0];
+      const titleInput = document.getElementById('matTitle');
+      if (!f) return;
+      if (!titleInput.value.trim()) { showToast("Add a title first"); return; }
+      const fd = new FormData();
+      fd.append("title", titleInput.value.trim());
+      fd.append("file", f);
+      try {
+        await api("/materials/upload", { method: "POST", body: fd, form: true });
+        titleInput.value = "";
+        showToast("Material uploaded");
+        loadMaterials();
+      } catch (err) { showToast("Upload failed: " + err.message); }
+    };
+  } else {
+    uploadArea.innerHTML = "";
+  }
+  loadMaterials();
+}
+
+async function loadMaterials(){
+  const grid = document.getElementById('matGrid');
+  try {
+    const materials = await api("/materials/");
+    if (materials.length === 0) {
+      grid.innerHTML = `<div class="empty-note">No materials uploaded yet.</div>`;
+      return;
+    }
+    grid.innerHTML = materials.map(m => `
+      <div class="material-card">
+        <span class="filetag">${(m.filename.split('.').pop() || 'file').toUpperCase()}</span>
+        <h4>${m.title}</h4>
+        <div class="meta">${new Date(m.uploaded_at).toLocaleDateString()}</div>
+      </div>`).join('');
+  } catch (err) { grid.innerHTML = `<div class="empty-note">Couldn't load materials: ${err.message}</div>`; }
+}
+
+// ---------- QUIZZES ----------
+async function renderQuizListTab(){
+  document.getElementById('quizListView').style.display = 'block';
+  document.getElementById('quizTakeView').style.display = 'none';
+
+  const controls = document.getElementById('teacherQuizControls');
+  if (currentUser.role === 'teacher') {
+    controls.innerHTML = `<button class="btn btn-primary" id="createDemoQuiz" style="margin-bottom:16px;">+ Create demo quiz</button>`;
+    document.getElementById('createDemoQuiz').onclick = async () => {
+      try {
+        await api("/quizzes/", { method: "POST", body: {
+          title: "Quiz — Sequences & limits",
+          questions: [
+            {text:"What is the limit of aₙ = 1/n as n → ∞?", type:"mcq", options:["1","0","∞","Does not exist"], correct_option:1, points:1},
+            {text:"A sequence is Cauchy if and only if it is:", type:"mcq", options:["Bounded","Monotonic","Convergent (in ℝ)","Divergent"], correct_option:2, points:1},
+            {text:"Evaluate: lim (n→∞) (3n² + 2)/(n² + 1)", type:"mcq", options:["0","1","3","∞"], correct_option:2, points:1},
+            {text:"Enter the limit of aₙ = (1 + 1/n)ⁿ as n → ∞ (2 decimal places).", type:"numeric", correct_value:2.72, tolerance:0.02, points:2}
+          ]
+        }});
+        showToast("Quiz created");
+        loadQuizList();
+      } catch (err) { showToast("Couldn't create quiz: " + err.message); }
+    };
+  } else {
+    controls.innerHTML = "";
+  }
+  loadQuizList();
+}
+
+async function loadQuizList(){
+  const list = document.getElementById('quizList');
+  try {
+    const quizzes = await api("/quizzes/");
+    if (quizzes.length === 0) {
+      list.innerHTML = `<div class="empty-note">No quizzes yet.</div>`;
+      return;
+    }
+    list.innerHTML = quizzes.map(q => `
+      <div class="quiz-list-item" data-quiz-id="${q.id}">
+        <h4>${q.title}</h4>
+        <div class="meta">${q.questions.length} question${q.questions.length === 1 ? '' : 's'}</div>
+      </div>`).join('');
+    list.querySelectorAll('.quiz-list-item').forEach(el => {
+      el.onclick = () => openQuiz(parseInt(el.dataset.quizId));
+    });
+  } catch (err) { list.innerHTML = `<div class="empty-note">Couldn't load quizzes: ${err.message}</div>`; }
+}
+
+async function openQuiz(quizId){
+  try {
+    const quiz = await api("/quizzes/" + quizId);
+    activeQuiz = quiz;
+    document.getElementById('quizListView').style.display = 'none';
+    document.getElementById('quizTakeView').style.display = 'block';
+    document.getElementById('quizTitle').textContent = quiz.title;
+    document.getElementById('quizSub').textContent = quiz.questions.length + " questions · auto-graded on submit";
+    document.getElementById('scoreBox').style.display = 'none';
+    document.getElementById('submitQuiz').style.display = 'inline-block';
+    renderQuizQuestions(quiz.questions);
+  } catch (err) { showToast("Couldn't open quiz: " + err.message); }
+}
+
+function renderQuizQuestions(questions){
+  const body = document.getElementById('quizBody');
+  body.innerHTML = questions.map((q, i) => {
+    if (q.type === "mcq") {
+      return `<div class="question" id="q${q.id}">
+        <div class="qnum">Question ${i + 1}</div>
+        <p class="qtext">${q.text}</p>
+        <div class="options">
+          ${q.options.map((opt, oi) => `
+            <label class="option" data-oi="${oi}">
+              <input type="radio" name="q${q.id}" value="${oi}"> ${opt}
+            </label>`).join('')}
+        </div>
+      </div>`;
+    } else {
+      return `<div class="question" id="q${q.id}">
+        <div class="qnum">Question ${i + 1}</div>
+        <p class="qtext">${q.text}</p>
+        <input type="number" step="0.01" class="num-input" id="numAns${q.id}" placeholder="Your answer">
+      </div>`;
+    }
+  }).join('');
+}
+
+document.getElementById('submitQuiz').onclick = async () => {
+  if (!activeQuiz) return;
+  const answers = {};
+  activeQuiz.questions.forEach(q => {
+    if (q.type === "mcq") {
+      const chosen = document.querySelector(`input[name="q${q.id}"]:checked`);
+      if (chosen) answers[q.id] = chosen.value;
+    } else {
+      const input = document.getElementById('numAns' + q.id);
+      if (input.value !== "") answers[q.id] = input.value;
+    }
+  });
+
+  try {
+    const result = await api("/quizzes/" + activeQuiz.id + "/submit", { method: "POST", body: { answers } });
+    result.breakdown.forEach(r => {
+      const qDiv = document.getElementById('q' + r.question_id);
+      qDiv.querySelectorAll('input').forEach(inp => inp.disabled = true);
+      const mark = document.createElement('div');
+      mark.className = 'mark ' + (r.correct ? 'correct' : 'wrong');
+      mark.textContent = r.correct ? '✓' : '✗';
+      qDiv.appendChild(mark);
+    });
+    document.getElementById('scoreText').textContent = result.score + "/" + result.max_score;
+    document.getElementById('scoreBox').style.display = 'block';
+    document.getElementById('submitQuiz').style.display = 'none';
+  } catch (err) { showToast("Couldn't submit: " + err.message); }
+};
+
+document.getElementById('backToQuizList').onclick = renderQuizListTab;
+
+// ---------- ANSWER SHEETS ----------
+function renderSheetsTab(){
+  const uploadArea = document.getElementById('sheetUploadArea');
+  uploadArea.innerHTML = `
+    <div class="upload-row">
+      <input type="text" id="sheetTitle" placeholder="Assignment title (e.g. Problem set 5)" value="Problem set 5">
+    </div>
+    <div class="upload-zone" id="sheetUploadZone">Click to upload a scanned answer sheet (PDF or photo)</div>
+    <input type="file" id="sheetFileInput" style="display:none">`;
+  document.getElementById('sheetUploadZone').onclick = () => document.getElementById('sheetFileInput').click();
+  document.getElementById('sheetFileInput').onchange = async (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const fd = new FormData();
+    fd.append("assignment_title", document.getElementById('sheetTitle').value.trim() || "Untitled assignment");
+    fd.append("max_score", "10");
+    fd.append("file", f);
+    try {
+      await api("/answer-sheets/upload", { method: "POST", body: fd, form: true });
+      showToast("Uploaded — grading pipeline ran, awaiting teacher review");
+      loadSheets();
+    } catch (err) { showToast("Upload failed: " + err.message); }
+  };
+  loadSheets();
+}
+
+async function loadSheets(){
+  const queue = document.getElementById('sheetQueue');
+  try {
+    const sheets = await api("/answer-sheets/");
+    if (sheets.length === 0) {
+      queue.innerHTML = `<div class="empty-note">No answer sheets yet.</div>`;
+      return;
+    }
+    queue.innerHTML = sheets.map(s => `
+      <div class="sheet-row">
+        <div class="info">
+          <h4>${s.filename}</h4>
+          <div class="meta">${s.assignment_title}</div>
+        </div>
+        <div class="ai-feedback">${s.ai_feedback ? s.ai_feedback : ''}</div>
+        <div class="sheet-actions">
+          <span class="ai-score">${s.status === 'approved' ? s.final_score : (s.suggested_score ?? '—')}${s.suggested_score != null ? '/' + s.max_score : ''}</span>
+          <span class="status ${s.status}">${s.status.replace(/_/g, ' ')}</span>
+          ${(currentUser.role === 'teacher' && s.status === 'graded_pending_review')
+            ? `<button class="btn btn-ghost btn-small" data-approve="${s.id}">Approve</button>` : ''}
+        </div>
+      </div>`).join('');
+    queue.querySelectorAll('[data-approve]').forEach(btn => {
+      btn.onclick = async () => {
+        try {
+          await api(`/answer-sheets/${btn.dataset.approve}/approve`, { method: "POST", body: {} });
+          showToast("Grade approved");
+          loadSheets();
+        } catch (err) { showToast("Couldn't approve: " + err.message); }
+      };
+    });
+  } catch (err) { queue.innerHTML = `<div class="empty-note">Couldn't load answer sheets: ${err.message}</div>`; }
+}
+
+// ---------- TAB SWITCHING ----------
+document.querySelectorAll('.nav-item').forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('main > .tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'quiz') renderQuizListTab();
+  };
+});
+</script>
+</body>
+</html>
