@@ -30,6 +30,7 @@
   .login-toggle a{color:var(--teal-dark);cursor:pointer;text-decoration:underline;}
   .error-msg{color:var(--red);font-size:13px;margin:0 0 12px;min-height:1em;}
   #registerFields{display:none;}
+  #teacherCodeField{display:none;}
 
   /* ---- App shell ---- */
   .app{display:none;min-height:100vh;}
@@ -52,19 +53,20 @@
   .tab.active{display:block;}
 
   .material-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;}
-  .material-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px;}
+  .material-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px;position:relative;}
   .material-card .filetag{display:inline-block;font-family:var(--font-mono);font-size:10.5px;letter-spacing:0.05em;text-transform:uppercase;background:var(--paper-2);color:var(--teal-dark);padding:2px 7px;border-radius:3px;margin-bottom:10px;}
   .material-card h4{margin:0 0 4px;font-size:15px;font-weight:600;}
   .material-card .meta{font-size:12.5px;color:var(--muted);}
+  .card-delete{position:absolute;top:14px;right:14px;color:var(--red);font-size:12px;cursor:pointer;background:none;border:none;text-decoration:underline;padding:0;}
   .upload-zone{border:1.5px dashed var(--line);border-radius:var(--radius);padding:24px;text-align:center;color:var(--muted);font-size:14px;margin-bottom:16px;cursor:pointer;background:#fff;}
   .upload-zone:hover{border-color:var(--teal);color:var(--teal-dark);}
   .upload-row{display:flex;gap:10px;margin-bottom:16px;align-items:center;}
   .upload-row input[type=text]{flex:1;padding:9px 11px;border:1px solid var(--line);border-radius:var(--radius);font-size:14px;}
   .empty-note{color:var(--muted);font-size:13.5px;background:#fff;border:1px dashed var(--line);border-radius:var(--radius);padding:16px;}
 
-  .quiz-list-item{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px 20px;margin-bottom:10px;cursor:pointer;}
+  .quiz-list-item{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px 20px;margin-bottom:10px;cursor:pointer;position:relative;}
   .quiz-list-item:hover{border-color:var(--teal);}
-  .quiz-list-item h4{margin:0 0 3px;font-size:15.5px;font-family:var(--font-display);font-weight:600;}
+  .quiz-list-item h4{margin:0 0 3px;font-size:15.5px;font-family:var(--font-display);font-weight:600;padding-right:60px;}
   .quiz-list-item .meta{font-size:12.5px;color:var(--muted);}
 
   .quiz-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;}
@@ -114,6 +116,9 @@
   .remove-link{color:var(--red);font-size:12.5px;cursor:pointer;background:none;border:none;text-decoration:underline;padding:0;}
   .builder-numeric-row{display:flex;gap:10px;flex-wrap:wrap;}
   .builder-numeric-row .field{flex:1;min-width:120px;margin-bottom:0;}
+
+  /* ---- Account tab ---- */
+  .account-form{max-width:340px;margin-bottom:8px;}
 </style>
 </head>
 <body>
@@ -144,6 +149,10 @@
         <option value="teacher">Teacher</option>
       </select>
     </div>
+    <div id="teacherCodeField" class="field">
+      <label>Teacher signup code</label>
+      <input type="password" id="regTeacherCode" placeholder="Ask your admin for this">
+    </div>
 
     <button class="btn btn-primary" style="width:100%;" id="authSubmit">Sign in</button>
     <div class="login-toggle" id="loginToggle">New here? <a id="toggleModeLink">Create an account</a></div>
@@ -158,6 +167,7 @@
       <button class="nav-item active" data-tab="materials">Materials</button>
       <button class="nav-item" data-tab="quiz">Quizzes</button>
       <button class="nav-item" data-tab="sheets">Answer sheets</button>
+      <button class="nav-item" data-tab="account">Account</button>
     </nav>
     <div class="sidebar-foot">
       <div id="whoami"></div>
@@ -219,6 +229,29 @@
       <div id="sheetUploadArea"></div>
       <div id="sheetQueue"></div>
     </section>
+
+    <!-- ACCOUNT -->
+    <section class="tab" id="account">
+      <div class="page-head"><h1>Account</h1><p>Update your password, or manage other accounts if you're a teacher.</p></div>
+
+      <div class="account-form">
+        <div class="field">
+          <label>Current password</label>
+          <input type="password" id="curPassword">
+        </div>
+        <div class="field">
+          <label>New password</label>
+          <input type="password" id="newPassword">
+        </div>
+        <button class="btn btn-primary" id="changePasswordBtn">Update password</button>
+      </div>
+
+      <div style="margin:20px 0;">
+        <button class="btn btn-ghost btn-small" id="deleteMyAccountBtn">Delete my account</button>
+      </div>
+
+      <div id="adminUsersArea" style="margin-top:28px;"></div>
+    </section>
   </main>
 </div>
 
@@ -261,9 +294,17 @@ async function api(path, { method = "GET", body = null, form = false, auth: need
 const authError = document.getElementById('authError');
 const nameField = document.getElementById('nameField');
 const registerFields = document.getElementById('registerFields');
+const teacherCodeField = document.getElementById('teacherCodeField');
+const regRole = document.getElementById('regRole');
 const loginSub = document.getElementById('loginSub');
 const authSubmit = document.getElementById('authSubmit');
 const toggleModeLink = document.getElementById('toggleModeLink');
+
+function syncTeacherCodeVisibility(){
+  teacherCodeField.style.display = (isRegisterMode && regRole.value === 'teacher') ? 'block' : 'none';
+}
+
+regRole.onchange = syncTeacherCodeVisibility;
 
 toggleModeLink.onclick = () => {
   isRegisterMode = !isRegisterMode;
@@ -273,6 +314,7 @@ toggleModeLink.onclick = () => {
   loginSub.textContent = isRegisterMode ? "Create your account" : "Sign in to your course";
   authSubmit.textContent = isRegisterMode ? "Create account" : "Sign in";
   toggleModeLink.textContent = isRegisterMode ? "Sign in instead" : "Create an account";
+  syncTeacherCodeVisibility();
 };
 
 authSubmit.onclick = async () => {
@@ -284,16 +326,24 @@ authSubmit.onclick = async () => {
   try {
     if (isRegisterMode) {
       const name = document.getElementById('regName').value.trim();
-      const role = document.getElementById('regRole').value;
+      const role = regRole.value;
+      const teacher_code = document.getElementById('regTeacherCode').value;
       if (!name) { authError.textContent = "Name is required."; return; }
-      await api("/auth/register", { method: "POST", auth: false, body: { name, email, password, role } });
+      await api("/auth/register", {
+        method: "POST", auth: false,
+        body: { name, email, password, role, teacher_code: role === 'teacher' ? teacher_code : undefined }
+      });
       showToast("Account created — signing you in");
     }
     const form = new URLSearchParams();
     form.set("username", email);
     form.set("password", password);
     const res = await fetch(API + "/auth/login", { method: "POST", body: form });
-    if (!res.ok) throw new Error("Incorrect email or password");
+    if (!res.ok) {
+      let detail = "Incorrect email or password";
+      try { const j = await res.json(); detail = j.detail || detail; } catch (e) {}
+      throw new Error(detail);
+    }
     const data = await res.json();
     token = data.access_token;
     currentUser = await api("/auth/me");
@@ -359,10 +409,13 @@ async function loadMaterials(){
       return;
     }
     grid.innerHTML = materials.map(m => `
-      <div class="material-card" onclick="downloadMaterial(${m.id}, '${m.filename.replace(/'/g, "\\'")}')" style="cursor:pointer;">
-        <span class="filetag">${(m.filename.split('.').pop() || 'file').toUpperCase()}</span>
-        <h4>${m.title}</h4>
-        <div class="meta">${new Date(m.uploaded_at).toLocaleDateString()}</div>
+      <div class="material-card">
+        <div onclick="downloadMaterial(${m.id}, '${m.filename.replace(/'/g, "\\'")}')" style="cursor:pointer;">
+          <span class="filetag">${(m.filename.split('.').pop() || 'file').toUpperCase()}</span>
+          <h4 style="padding-right:${currentUser.role === 'teacher' ? '46px' : '0'};">${m.title}</h4>
+          <div class="meta">${new Date(m.uploaded_at).toLocaleDateString()}</div>
+        </div>
+        ${currentUser.role === 'teacher' ? `<button class="card-delete" onclick="event.stopPropagation(); deleteMaterial(${m.id})">Delete</button>` : ''}
       </div>`).join('');
   } catch (err) { grid.innerHTML = `<div class="empty-note">Couldn't load materials: ${err.message}</div>`; }
 }
@@ -381,6 +434,15 @@ async function downloadMaterial(id, filename){
     a.click();
     URL.revokeObjectURL(url);
   } catch (err) { showToast("Download failed: " + err.message); }
+}
+
+async function deleteMaterial(id){
+  if (!confirm("Delete this material? This can't be undone.")) return;
+  try {
+    await api("/materials/" + id, { method: "DELETE" });
+    showToast("Material deleted");
+    loadMaterials();
+  } catch (err) { showToast("Couldn't delete: " + err.message); }
 }
 
 // ---------- QUIZZES ----------
@@ -430,11 +492,21 @@ async function loadQuizList(){
       <div class="quiz-list-item" data-quiz-id="${q.id}">
         <h4>${q.title}</h4>
         <div class="meta">${q.questions.length} question${q.questions.length === 1 ? '' : 's'}</div>
+        ${currentUser.role === 'teacher' ? `<button class="card-delete" onclick="event.stopPropagation(); deleteQuiz(${q.id})">Delete</button>` : ''}
       </div>`).join('');
     list.querySelectorAll('.quiz-list-item').forEach(el => {
       el.onclick = () => openQuiz(parseInt(el.dataset.quizId));
     });
   } catch (err) { list.innerHTML = `<div class="empty-note">Couldn't load quizzes: ${err.message}</div>`; }
+}
+
+async function deleteQuiz(id){
+  if (!confirm("Delete this quiz and all student attempts on it? This can't be undone.")) return;
+  try {
+    await api("/quizzes/" + id, { method: "DELETE" });
+    showToast("Quiz deleted");
+    loadQuizList();
+  } catch (err) { showToast("Couldn't delete: " + err.message); }
 }
 
 async function openQuiz(quizId){
@@ -724,6 +796,77 @@ async function loadSheets(){
   } catch (err) { queue.innerHTML = `<div class="empty-note">Couldn't load answer sheets: ${err.message}</div>`; }
 }
 
+// ---------- ACCOUNT ----------
+function renderAccountTab(){
+  document.getElementById('curPassword').value = '';
+  document.getElementById('newPassword').value = '';
+  const adminArea = document.getElementById('adminUsersArea');
+  if (currentUser.role === 'teacher') {
+    adminArea.innerHTML = `
+      <h3 style="font-family:var(--font-display);font-size:19px;margin-bottom:12px;">All accounts</h3>
+      <div id="userList"></div>`;
+    loadUserList();
+  } else {
+    adminArea.innerHTML = '';
+  }
+}
+
+document.getElementById('changePasswordBtn').onclick = async () => {
+  const current_password = document.getElementById('curPassword').value;
+  const new_password = document.getElementById('newPassword').value;
+  if (!current_password || !new_password) { showToast('Fill in both fields'); return; }
+  try {
+    await api('/auth/change-password', { method: 'PUT', body: { current_password, new_password } });
+    showToast('Password updated');
+    document.getElementById('curPassword').value = '';
+    document.getElementById('newPassword').value = '';
+  } catch (err) { showToast("Couldn't update: " + err.message); }
+};
+
+document.getElementById('deleteMyAccountBtn').onclick = async () => {
+  if (!confirm("Delete your account and everything you've uploaded/created? This can't be undone.")) return;
+  try {
+    await api('/auth/me', { method: 'DELETE' });
+    showToast('Account deleted');
+    document.getElementById('logoutBtn').click();
+  } catch (err) { showToast("Couldn't delete account: " + err.message); }
+};
+
+async function loadUserList(){
+  const box = document.getElementById('userList');
+  try {
+    const users = await api('/auth/users');
+    box.innerHTML = users.map(u => `
+      <div class="sheet-row">
+        <div class="info">
+          <h4>${u.name}</h4>
+          <div class="meta">${u.email} · ${u.role}</div>
+        </div>
+        <div class="sheet-actions">
+          <button class="btn btn-ghost btn-small" onclick="resetUserPassword(${u.id}, '${u.email.replace(/'/g, "\\'")}')">Reset password</button>
+          ${u.id !== currentUser.id ? `<button class="btn btn-ghost btn-small" onclick="deleteUserAccount(${u.id})">Delete</button>` : ''}
+        </div>
+      </div>`).join('');
+  } catch (err) { box.innerHTML = `<div class="empty-note">Couldn't load accounts: ${err.message}</div>`; }
+}
+
+async function resetUserPassword(id, email){
+  if (!confirm('Reset password for ' + email + '?')) return;
+  try {
+    const result = await api('/auth/users/' + id + '/reset-password', { method: 'POST', body: {} });
+    alert('New password for ' + result.email + ':\n\n' + result.new_password + '\n\nShare this with them directly — it will not be shown again.');
+  } catch (err) { showToast("Couldn't reset: " + err.message); }
+}
+
+async function deleteUserAccount(id){
+  if (!confirm('Delete this account and everything they created? This can\'t be undone.')) return;
+  try {
+    await api('/auth/users/' + id, { method: 'DELETE' });
+    showToast('Account deleted');
+    loadUserList();
+  } catch (err) { showToast("Couldn't delete: " + err.message); }
+}
+
 // ---------- TAB SWITCHING ----------
 document.querySelectorAll('.nav-item').forEach(btn => {
   btn.onclick = () => {
@@ -732,6 +875,7 @@ document.querySelectorAll('.nav-item').forEach(btn => {
     btn.classList.add('active');
     document.getElementById(btn.dataset.tab).classList.add('active');
     if (btn.dataset.tab === 'quiz') renderQuizListTab();
+    if (btn.dataset.tab === 'account') renderAccountTab();
   };
 });
 </script>
